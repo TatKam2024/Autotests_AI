@@ -1,69 +1,84 @@
-import { test, expect, Page } from '@playwright/test';
-import { LoginPage } from '../pages/LoginPage';
+import { test, expect } from '@playwright/test';
 
+// Данные и селекторы
 const password = 'secret_sauce';
+const loginUrl = 'https://www.saucedemo.com/';
+const inventoryUrlPattern = /.*inventory\.html/;
+const lockedOutErrorText = 'Epic sadface: Sorry, this user has been locked out.';
 
-test.describe('Authorization tests for all users (POM)', () => {
-    let loginPage: LoginPage;
+const usernameInput = '[data-test="username"]';
+const passwordInput = '[data-test="password"]';
+const loginButton = '[data-test="login-button"]';
+const inventoryContainer = '[data-test="inventory-container"]';
+const errorMessage = '[data-test="error"]';
 
-    // beforeEach выполнится перед каждым тестом внутри describe
-    test.beforeEach(async ({ page }) => {
-        loginPage = new LoginPage(page);  // создаём объект LoginPage
-        await loginPage.goto();           // переходим на страницу логина
-    });
+// Универсальный шаг логина
+async function login(page, username: string) {
+  await page.locator(usernameInput).fill(username);
+  await page.locator(passwordInput).fill(password);
+  await page.locator(loginButton).click();
+}
 
-    test('Login as standard_user', async () => {
-        // Шаги
-        await loginPage.login('standard_user', password);
+// Открытие страницы перед каждым тестом
+test.beforeEach(async ({ page }) => {
+  await page.goto(loginUrl);
+});
 
-        // Результат
-        expect(await loginPage.isOnInventoryPage()).toBeTruthy(); 
-        expect(await loginPage.isInventoryVisible()).toBeTruthy(); 
-    });
+// Группа тестов
+test.describe('Authorization tests for all users', () => {
 
-    test('Login as locked_out_user', async () => {
-        // Шаги
-        await loginPage.login('locked_out_user', password);
+  test('Login as standard_user', async ({ page }) => {
+    // Авторизация
+    await login(page, 'standard_user');
 
-        // Результат
-        const errorText = await loginPage.getErrorMessage();
-        expect(errorText).toContain('Sorry, this user has been locked out.');
-    });
+    // Проверка успешного входа
+    await expect(page).toHaveURL(inventoryUrlPattern);
+    await expect(page.locator(inventoryContainer)).toBeVisible();
+  });
 
-    test('Login as problem_user', async () => {
-        // Шаги
-        await loginPage.login('problem_user', password);
+  test('Login as locked_out_user', async ({ page }) => {
+    // Авторизация
+    await login(page, 'locked_out_user');
 
-        // Результат
-        expect(await loginPage.isOnInventoryPage()).toBeTruthy();
-        expect(await loginPage.isInventoryVisible()).toBeTruthy();
-    });
+    // Проверка сообщения об ошибке
+    await expect(page.locator(errorMessage)).toContainText(lockedOutErrorText);
+  });
 
-    test('Login as performance_glitch_user (check delay)', async () => {
-        // Шаги
-        await loginPage.login('performance_glitch_user', password);
+  test('Login as problem_user', async ({ page }) => {
+    // Авторизация
+    await login(page, 'problem_user');
 
-        // Результат
-        await loginPage.waitForInventory(); // ждём появление товаров
-        expect(await loginPage.isOnInventoryPage()).toBeTruthy();
-        expect(await loginPage.isInventoryVisible()).toBeTruthy();
-    });
+    // Проверка успешного входа
+    await expect(page).toHaveURL(inventoryUrlPattern);
+    await expect(page.locator(inventoryContainer)).toBeVisible();
+  });
 
-    test('Login as error_user', async () => {
-        // Шаги
-        await loginPage.login('error_user', password);
+  test('Login as performance_glitch_user (check delay)', async ({ page }) => {
+    // Авторизация
+    await login(page, 'performance_glitch_user');
 
-        // Результат
-        expect(await loginPage.isOnInventoryPage()).toBeTruthy();
-        expect(await loginPage.isInventoryVisible()).toBeTruthy();
-    });
+    // Проверка задержки и успешного входа
+    await page.locator(inventoryContainer).waitFor({ timeout: 10000 });
+    await expect(page).toHaveURL(inventoryUrlPattern);
+    await expect(page.locator(inventoryContainer)).toBeVisible();
+  });
 
-    test('Login as visual_user', async () => {
-        // Шаги
-        await loginPage.login('visual_user', password);
+  test('Login as error_user', async ({ page }) => {
+    // Авторизация
+    await login(page, 'error_user');
 
-        // Результат
-        expect(await loginPage.isOnInventoryPage()).toBeTruthy();
-        expect(await loginPage.isInventoryVisible()).toBeTruthy();
-    });
+    // Проверка успешного входа
+    await expect(page).toHaveURL(inventoryUrlPattern);
+    await expect(page.locator(inventoryContainer)).toBeVisible();
+  });
+
+  test('Login as visual_user', async ({ page }) => {
+    // Авторизация
+    await login(page, 'visual_user');
+
+    // Проверка успешного входа
+    await expect(page).toHaveURL(inventoryUrlPattern);
+    await expect(page.locator(inventoryContainer)).toBeVisible();
+  });
+
 });
