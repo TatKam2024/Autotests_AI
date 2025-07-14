@@ -1,41 +1,45 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 
 export class LoginPage {
-    readonly page: Page;
+  readonly page: Page;
 
-    constructor(page: Page) {
-        this.page = page;
-    }
+  // Селекторы
+  readonly usernameInput = '[data-test="username"]';
+  readonly passwordInput = '[data-test="password"]';
+  readonly loginButton = '[data-test="login-button"]';
+  readonly inventoryContainer = '[data-test="inventory-container"]';
+  readonly errorMessage = '[data-test="error"]';
+  readonly inventoryUrlPattern = /.*inventory\.html/;
 
-    // Переход на страницу логина
-    async goto() {
-        await this.page.goto('https://www.saucedemo.com/');
-    }
+  constructor(page: Page) {
+    this.page = page;
+  }
 
-    // Авторизация с заданным логином и паролем
-    async login(username: string, password: string) {
-        await this.page.locator('[data-test="username"]').fill(username);
-        await this.page.locator('[data-test="password"]').fill(password);
-        await this.page.locator('[data-test="login-button"]').click();
-    }
+  // Шаги
+  async goto() {
+    await this.page.goto('https://www.saucedemo.com/');
+  }
 
-    // Проверка, отображается ли страница инвентаря
-    async isInventoryVisible() {
-        return this.page.locator('[data-test="inventory-container"]').isVisible();
-    }
+  // Шаги
+  async login(username: string, password: string) {
+    await this.page.locator(this.usernameInput).fill(username);
+    await this.page.locator(this.passwordInput).fill(password);
+    await this.page.locator(this.loginButton).click();
+  }
 
-    // Проверка URL после входа
-    async isOnInventoryPage() {
-        return this.page.url().includes('inventory.html');
-    }
+  // Результат: проверка успешного входа и отображения страницы с товарами
+  async assertSuccessfulLogin() {
+    await expect(this.page).toHaveURL(this.inventoryUrlPattern);
+    await expect(this.page.locator(this.inventoryContainer)).toBeVisible();
+  }
 
-    // Получение текста ошибки при неудачном входе
-    async getErrorMessage() {
-        return this.page.locator('[data-test="error"]').innerText();
-    }
+  // Результат: проверка текста ошибки на странице
+  async assertErrorMessage(expectedText: string) {
+    await expect(this.page.locator(this.errorMessage)).toContainText(expectedText);
+  }
 
-    // Явное ожидание появления инвентаря (для замедленного входа)
-    async waitForInventory(timeout = 10000) {
-        await this.page.locator('[data-test="inventory-container"]').waitFor({ timeout });
-    }
+  // Шаги: явное ожидание загрузки страницы с товарами
+  async waitForInventory(timeout = 10000) {
+    await this.page.locator(this.inventoryContainer).waitFor({ timeout });
+  }
 }
