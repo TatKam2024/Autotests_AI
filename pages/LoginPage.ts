@@ -3,13 +3,10 @@ import { Page, expect } from '@playwright/test';
 export class LoginPage {
   readonly page: Page;
 
-  // Селекторы
   readonly usernameInput = '[data-test="username"]';
   readonly passwordInput = '[data-test="password"]';
   readonly loginButton = '[data-test="login-button"]';
-  readonly inventoryContainer = '[data-test="inventory-container"]';
   readonly errorMessage = '[data-test="error"]';
-  readonly inventoryUrlPattern = /.*inventory\.html/;
 
   constructor(page: Page) {
     this.page = page;
@@ -27,19 +24,8 @@ export class LoginPage {
     await this.page.locator(this.loginButton).click();
   }
 
-  // Результат: проверка успешного входа и отображения страницы с товарами
-  async assertSuccessfulLogin() {
-    await expect(this.page).toHaveURL(this.inventoryUrlPattern);
-    await expect(this.page.locator(this.inventoryContainer)).toBeVisible();
-  }
-
-  // Результат: проверка текста ошибки на странице
+  // Результат: отображается сообщение об ошибке
   async assertErrorMessage(expectedText: string) {
     await expect(this.page.locator(this.errorMessage)).toContainText(expectedText);
-  }
-
-  // Шаги: явное ожидание загрузки страницы с товарами
-  async waitForInventory(timeout = 10000) {
-    await this.page.locator(this.inventoryContainer).waitFor({ timeout });
   }
 }
